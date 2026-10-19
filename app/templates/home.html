@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}ChequeScript{% endblock %}
+{% block body %}
+<section class="hero">
+  <p class="kicker">Accounting packets</p>
+  <h1>Handwritten cheques, set in type.</h1>
+  <p class="lede">Drop in a customer PDF. Typed pages stay as they are. Each photo of a cheque becomes a print record you can check, and both go into a new file.</p>
+</section>
+
+<section class="panel">
+  <ol class="steps">
+    <li><span>1</span>Add the PDF</li>
+    <li><span>2</span>Read the cheque, or type it</li>
+    <li><span>3</span>Create the print file</li>
+  </ol>
+  <form class="upload" action="/jobs" method="post" enctype="multipart/form-data">
+    <label class="drop" data-drop>
+      <input id="pdf" name="file" type="file" accept="application/pdf,.pdf" required>
+      <span class="drop-title">Drop a customer PDF</span>
+      <span class="drop-copy">or click to browse. One file at a time.</span>
+    </label>
+    <p class="warn drop-error" data-drop-error></p>
+    <button class="btn" type="submit">Open this PDF</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Recent files</h2>
+  {% if jobs %}
+    <ul class="files">
+      {% for job in jobs %}
+        <li>
+          <div>
+            <a class="file-name" href="/jobs/{{ job.id }}">{{ job.filename }}</a>
+            <p class="quiet">{{ job.created_at|shortdate }} · {{ job.typescript|length }} typed · {{ job.cheques|length }} pictures · {{ STATUS_LABEL.get(job.status, "Needs review") }}</p>
+          </div>
+          <div class="row-actions">
+            <a href="/jobs/{{ job.id }}">Open</a>
+            {% if job.output %}
+              <a href="/jobs/{{ job.id }}/result">Print file</a>
+            {% endif %}
+            <form method="post" action="/jobs/{{ job.id }}/delete" data-confirm="Delete this file from ChequeScript?">
+              <button class="text-button" type="submit">Delete</button>
+            </form>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="quiet">No files yet. Drop a customer PDF to start.</p>
+  {% endif %}
+</section>
+{% endblock %}

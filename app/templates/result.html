@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Print file · {{ job.filename }}{% endblock %}
+{% block body %}
+<section class="page-head">
+  <div>
+    <p class="kicker">Print file</p>
+    <h1>Print file ready</h1>
+    <p class="lede">{{ job.filename }} · {{ job.printed.page_count }} pages. Original typed pages come first. Cheque print records follow.</p>
+  </div>
+  <div class="toolbar">
+    <a class="btn" href="/jobs/{{ job.id }}/download">Download PDF</a>
+    <a class="btn secondary" href="/jobs/{{ job.id }}/csv">Download CSV</a>
+    <a class="btn quiet" href="/jobs/{{ job.id }}">Back to review</a>
+  </div>
+</section>
+
+{% if job.printed.total %}
+  <p class="total">Cheque total {{ job.printed.total }}</p>
+{% endif %}
+
+<section class="result-grid">
+  <div>
+    <h2>Typed pages</h2>
+    {% for block in job.typescript %}
+      <article class="sheet">
+        <p class="sheet-kicker">Page {{ block.page }} · original type</p>
+        <div class="sheet-body">{{ block.text }}</div>
+      </article>
+    {% else %}
+      <p class="quiet">No text layer was found in the original file.</p>
+    {% endfor %}
+    {% for block in job.printed.typed_pictures %}
+      <article class="sheet">
+        <p class="sheet-kicker">Page {{ block.page }} · read from a picture</p>
+        <div class="sheet-body">{{ block.text }}</div>
+      </article>
+    {% endfor %}
+  </div>
+  <div>
+    <h2>Cheque print records</h2>
+    {% for cheque in job.printed.cheques %}
+      <article class="printout">
+        <p class="printout-kicker">Print record</p>
+        <p class="printout-no">No. {{ cheque.fields.cheque_number or "—" }}</p>
+        <dl>
+          <div><dt>Date</dt><dd>{{ cheque.fields.date or "—" }}</dd></div>
+          <div><dt>Pay to</dt><dd>{{ cheque.fields.payee or "—" }}</dd></div>
+          <div><dt>Amount</dt><dd>{{ cheque.fields.amount_numeric or "—" }}</dd></div>
+          <div><dt>In words</dt><dd>{{ cheque.fields.amount_words or "—" }}</dd></div>
+          <div><dt>Bank</dt><dd>{{ cheque.fields.bank_name or "—" }}</dd></div>
+          <div><dt>Drawer</dt><dd>{{ cheque.fields.drawer or "—" }}</dd></div>
+          <div><dt>Memo</dt><dd>{{ cheque.fields.memo or "—" }}</dd></div>
+        </dl>
+        {% for warning in cheque.warnings if warning.level != "quiet" %}
+          <p class="flag {{ warning.level }}">{{ warning.text }}</p>
+        {% endfor %}
+      </article>
+    {% else %}
+      <p class="quiet">No cheque records were included.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Pages in the file</h2>
+  {% for number in range(1, job.printed.preview_count + 1) %}
+    <figure class="page-preview">
+      <figcaption>Page {{ number }}</figcaption>
+      <img src="/jobs/{{ job.id }}/previews/{{ number }}.png" alt="Page {{ number }} of the print file">
+    </figure>
+  {% endfor %}
+</section>
+{% endblock %}

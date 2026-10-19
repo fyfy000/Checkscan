@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Reading · {{ job.filename }}{% endblock %}
+{% block body %}
+<section class="panel wait">
+  {% if job.status == "transcribing" %}
+    <p class="kicker">Reading</p>
+    <h1>Reading the handwriting</h1>
+    <p>Each cheque picture is with the vision model. You can leave this page open.</p>
+    <div class="meter" aria-hidden="true"><span></span></div>
+    <p class="quiet">{{ job.filename }}</p>
+    <div data-poll="/jobs/{{ job.id }}/status" data-next="/jobs/{{ job.id }}"></div>
+  {% else %}
+    <p class="kicker">Reading</p>
+    <h1>No reading in progress</h1>
+    <p>This file is not with the model right now.</p>
+    <p><a class="btn" href="/jobs/{{ job.id }}">Back to the file</a></p>
+  {% endif %}
+</section>
+{% endblock %}

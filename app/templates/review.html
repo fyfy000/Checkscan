@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Review · {{ job.filename }}{% endblock %}
+{% block body %}
+<section class="page-head">
+  <div>
+    <p class="kicker">Review</p>
+    <h1>{{ job.filename }}</h1>
+    <p class="lede">{{ job.typescript|length }} typed page{% if job.typescript|length != 1 %}s{% endif %} · {{ job.cheques|length }} picture{% if job.cheques|length != 1 %}s{% endif %}</p>
+  </div>
+  {% if job.cheques %}
+    <form method="post" action="/jobs/{{ job.id }}/transcribe" class="read-form">
+      {% if has_key %}
+        <label class="check"><input type="checkbox" name="overwrite"> Replace details already filled in</label>
+        <button class="btn ai" type="submit">Read handwriting</button>
+      {% else %}
+        <p class="quiet">To read handwriting automatically, <a href="/settings">add a vision model</a>. You can also type the cheque yourself.</p>
+        <button class="btn ai" type="submit">Read handwriting</button>
+      {% endif %}
+    </form>
+  {% endif %}
+</section>
+
+{% if job.status == "transcribing" %}
+  <div class="banner" role="status">Handwriting is being read. <a href="/jobs/{{ job.id }}/processing">Watch the progress</a>.</div>
+{% endif %}
+{% if job.error %}
+  <div class="banner bad" role="alert">{{ job.error }}</div>
+{% endif %}
+
+<ol class="legend">
+  {% for page in job.pages %}
+    <li><span>Page {{ page.page }}</span>{{ PAGE_LABEL.get(page.role, page.role) }}</li>
+  {% endfor %}
+</ol>
+
+<form method="post" action="/jobs/{{ job.id }}/build">
+  <div class="toolbar">
+    <button class="btn" type="submit">Create print file</button>
+  </div>
+
+  <div class="workspace">
+    <section class="sheets" aria-label="Typed pages">
+      <h2>Typed pages</h2>
+      {% for block in job.typescript %}
+        <article class="sheet">
+          <p class="sheet-kicker">Page {{ block.page }} · original type</p>
+          <div class="sheet-body">{{ block.text }}</div>
+        </article>
+      {% else %}
+        <p class="quiet">No text layer was found. Picture pages are on the right. Mark one as a typed page if the model reads prose rather than a cheque.</p>
+      {% endfor %}
+    </section>
+
+    <section class="pictures" aria-label="Pictures">
+      <h2>Pictures</h2>
+      {% if not job.cheques %}
+        <p class="quiet">No cheque pictures were found. You can still make a file from the typed pages.</p>
+      {% endif %}
+      {% for cheque in job.cheques %}
+        <article class="cheque is-{{ cheque.role }}" data-cheque>
+          <header class="cheque-head">
+            <h3>Picture {{ loop.index }} · page {{ cheque.page }}</h3>
+            {% if cheque.source == "ai" or cheque.source == "reviewed" %}
+              <span class="pill">Read by the model</span>
+            {% elif cheque.source == "manual" %}
+              <span class="pill">Typed in</span>
+            {% elif cheque.source == "error" %}
+              <span class="pill bad">Could not read</span>
+            {% else %}
+              <span class="pill">Awaiting a read</span>
+            {% endif %}
+            {% if cheque.confidence is not none %}
+              <span class="pill">{{ (cheque.confidence * 100)|round|int }}% confidence</span>
+            {% endif %}
+          </header>
+
+          <a href="/jobs/{{ job.id }}/images/{{ cheque.image }}" target="_blank" rel="noopener">
+            <img class="scan" src="/jobs/{{ job.id }}/images/{{ cheque.image }}" alt="Picture from {{ job.filename }}, page {{ cheque.page }}">
+          </a>
+          <p class="quiet">Open the picture full size</p>
+          {% if cheque.shared %}
+            <p class="quiet">Another cheque was on this same picture. These are its own details.</p>
+          {% endif %}
+
+          {% if cheque.error %}
+            <p class="flag warn">{{ cheque.error }}</p>
+          {% endif %}
+          {% for warning in cheque.warnings %}
+            <p class="flag role-note {{ warning.level }}">{{ warning.text }}</p>
+          {% endfor %}
+
+          {% if cheque.ocr_hint %}
+            <details>
+              <summary>Text layer found on this picture</summary>
+              <div class="sheet-body">{{ cheque.ocr_hint }}</div>
+            </details>
+          {% endif %}
+
+          <fieldset class="segment">
+            <legend>What should this picture become?</legend>
+            <label><input type="radio" name="{{ cheque.id }}__role" value="cheque" {% if cheque.role == "cheque" %}checked{% endif %}><span>Cheque record</span></label>
+            <label><input type="radio" name="{{ cheque.id }}__role" value="typed" {% if cheque.role == "typed" %}checked{% endif %}><span>Typed page</span></label>
+            <label><input type="radio" name="{{ cheque.id }}__role" value="omit" {% if cheque.role == "omit" %}checked{% endif %}><span>Leave out</span></label>
+          </fieldset>
+
+          <div class="typed-fields">
+            <label for="{{ cheque.id }}-typed">Typed text from this picture</label>
+            <textarea id="{{ cheque.id }}-typed" name="{{ cheque.id }}__typed_text" rows="8">{{ cheque.typed_text }}</textarea>
+            <p class="quiet">Leave this blank to keep the picture itself in the print file.</p>
+          </div>
+
+          <div class="cheque-fields">
+            {% for key, label in PRIMARY_FIELDS %}
+              <label for="{{ cheque.id }}-{{ key }}">{{ label }}</label>
+              <input id="{{ cheque.id }}-{{ key }}" name="{{ cheque.id }}__{{ key }}" data-field="{{ key }}" value="{{ cheque.fields[key] }}" {% if key in ["cheque_number", "amount_numeric", "currency"] %}spellcheck="false"{% endif %} autocomplete="off">
+            {% endfor %}
+            <label for="{{ cheque.id }}-signature">Signature</label>
+            <select id="{{ cheque.id }}-signature" name="{{ cheque.id }}__signature_present" data-field="signature_present">
+              <option value="unknown" {% if cheque.fields.signature_present == "unknown" %}selected{% endif %}>Not confirmed</option>
+              <option value="yes" {% if cheque.fields.signature_present == "yes" %}selected{% endif %}>Present</option>
+              <option value="no" {% if cheque.fields.signature_present == "no" %}selected{% endif %}>Not seen</option>
+            </select>
+            <details>
+              <summary>Branch, account line, note</summary>
+              {% for key, label in MORE_FIELDS %}
+                <label for="{{ cheque.id }}-{{ key }}">{{ label }}</label>
+                <input id="{{ cheque.id }}-{{ key }}" name="{{ cheque.id }}__{{ key }}" data-field="{{ key }}" value="{{ cheque.fields[key] }}" autocomplete="off">
+              {% endfor %}
+              <label for="{{ cheque.id }}-notes">Note</label>
+              <textarea id="{{ cheque.id }}-notes" name="{{ cheque.id }}__notes" data-field="notes" rows="3">{{ cheque.fields.notes }}</textarea>
+            </details>
+
+            <div class="printout" aria-label="Print preview">
+              <p class="printout-kicker">Print record</p>
+              <p class="printout-no">No. <span data-out="cheque_number">{{ cheque.fields.cheque_number or "—" }}</span></p>
+              <dl>
+                <div><dt>Date</dt><dd data-out="date">{{ cheque.fields.date or "—" }}</dd></div>
+                <div><dt>Pay to</dt><dd data-out="payee">{{ cheque.fields.payee or "—" }}</dd></div>
+                <div><dt>Amount</dt><dd data-out="amount_numeric">{{ cheque.fields.amount_numeric or "—" }}</dd></div>
+                <div><dt>In words</dt><dd data-out="amount_words">{{ cheque.fields.amount_words or "—" }}</dd></div>
+                <div><dt>Bank</dt><dd data-out="bank_name">{{ cheque.fields.bank_name or "—" }}</dd></div>
+                <div><dt>Drawer</dt><dd data-out="drawer">{{ cheque.fields.drawer or "—" }}</dd></div>
+                <div><dt>Memo</dt><dd data-out="memo">{{ cheque.fields.memo or "—" }}</dd></div>
+                <div><dt>Signature</dt><dd data-out="signature_present">{% if cheque.fields.signature_present == "yes" %}Present{% elif cheque.fields.signature_present == "no" %}Not seen{% else %}Not confirmed{% endif %}</dd></div>
+              </dl>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn" type="submit">Create print file</button>
+  </div>
+</form>
+{% endblock %}

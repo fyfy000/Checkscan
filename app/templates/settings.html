@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Settings · ChequeScript{% endblock %}
+{% block body %}
+<section class="page-head">
+  <div>
+    <p class="kicker">Settings</p>
+    <h1>Model settings</h1>
+    <p class="lede">Handwriting is read by a vision model you choose. The key stays in the data folder on this computer unless it is already in the environment.</p>
+  </div>
+</section>
+<form class="panel form" method="post" action="/settings">
+  <label for="base_url">Model address</label>
+  <input id="base_url" name="base_url" type="url" required value="{{ base_url }}" spellcheck="false" autocomplete="off">
+  <p class="quiet">An OpenAI-compatible address. The default is https://api.openai.com/v1.</p>
+
+  <label for="model">Vision model</label>
+  <input id="model" name="model" type="text" required value="{{ model }}" spellcheck="false" autocomplete="off">
+  <p class="quiet">Use a model that can see images, such as gpt-4o.</p>
+
+  <label for="api_key">API key</label>
+  <input id="api_key" name="api_key" type="password" value="" placeholder="{% if has_key %}Leave blank to keep the current key{% else %}Paste a key{% endif %}" autocomplete="off">
+  {% if hint %}
+    <p class="quiet">{{ hint }}</p>
+  {% else %}
+    <p class="quiet">If OPENAI_API_KEY is set for this computer, ChequeScript uses it until you save a key here.</p>
+  {% endif %}
+
+  <div class="toolbar">
+    <button class="btn" type="submit">Save settings</button>
+    <button class="btn secondary" type="button" data-test-model>Check connection</button>
+  </div>
+  <p class="flag quiet" data-test-result role="status"></p>
+</form>
+{% endblock %}
