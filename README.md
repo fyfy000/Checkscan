@@ -1,24 +1,24 @@
 # ChequeScript
 
-本地小工具。客户 PDF 里往往既有打印文字，也有手写支票的照片。打印页原样保留，手写支票交给视觉模型读成可核对的文字记录，再生成一份新的 PDF。
+A local tool for customer PDFs that mix typed pages with photos of handwritten cheques. Typed pages stay as they are. Each cheque photo is read by a vision model into a record you can check, and both go into a new PDF.
 
-支票记录只用于记账，页脚写明不是可流通支票。
+The cheque record is for the accounting file. The footer says it is not a negotiable cheque.
 
-## 能做什么
+## What it does
 
-- 上传一份 PDF。打印页照抄；同一页上的支票照片会拆开。
-- 一张图里如果有多张支票，中间有空白时会切开。读的时候如果模型认出不止一张，会各记一条。
-- 核对金额、收款人、日期等字段，也可以改成普通文字页，或从文件里去掉。
-- 生成新的 PDF 和 CSV。原有打印内容在前，支票文字记录在后。
-- 只有点击 Read handwriting 时，支票图片才会发给你在设置里填写的模型。
+- Upload one PDF. Typed pages are copied. Cheque photos on the same page are split apart.
+- When one picture contains several cheques and a blank gap separates them, the picture is cut. If the model still finds more than one cheque, each one becomes its own record.
+- Check the amount, payee, date, and the other fields. Mark a picture as an ordinary typed page, or leave it out.
+- Create a new PDF and a CSV. The original typed pages come first. Cheque print records follow.
+- A cheque image is sent to the model in Settings only when you click Read handwriting.
 
-## 安装
+## Install
 
-需要 Windows 上的 Python 3.11 或更新版本。
+Python 3.11 or newer on Windows.
 
-双击 `start.bat`。第一次运行会创建虚拟环境、安装依赖，并打开 http://127.0.0.1:8741 。
+Double-click `start.bat`. The first run creates a virtual environment, installs the dependencies, and opens http://127.0.0.1:8741 .
 
-也可以手动启动：
+Or start it yourself:
 
 ```bat
 python -m venv .venv
@@ -26,9 +26,9 @@ python -m venv .venv
 .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8741
 ```
 
-在 Settings 里填写模型地址、模型名和 API key。程序只监听本机。Key 保存在本机的 `data/settings.json`，这个目录不会进入仓库。
+In Settings, enter the model address, model name, and API key. The program listens only on this computer. The key is stored in `data/settings.json` on this computer, and that directory is not part of the repository.
 
-## 测试
+## Tests
 
 ```bat
 .venv\Scripts\python.exe -m pytest tests -q
